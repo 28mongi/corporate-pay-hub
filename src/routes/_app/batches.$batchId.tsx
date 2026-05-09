@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_app/batches/$batchId")({
 });
 
 function BatchDetail() {
-  const batch = Route.useLoaderData();
+  const batch = Route.useLoaderData() as ReturnType<typeof Route.options.loader>;
 
   return (
     <>
