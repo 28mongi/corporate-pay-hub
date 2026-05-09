@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/app-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { batches } from "@/lib/mock-data";
+import type { PaymentBatch } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDate, formatMoney } from "@/lib/format";
 import { ChevronLeft, Check, X, MessageSquare, FileDown, Send } from "lucide-react";
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/_app/batches/$batchId")({
 });
 
 function BatchDetail() {
-  const batch = Route.useLoaderData() as ReturnType<typeof Route.options.loader>;
+  const batch = Route.useLoaderData() as PaymentBatch;
 
   return (
     <>
