@@ -9,38 +9,211 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppUsersRouteImport } from './routes/_app/users'
+import { Route as AppReportsRouteImport } from './routes/_app/reports'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppAuditLogsRouteImport } from './routes/_app/audit-logs'
+import { Route as AppBatchesIndexRouteImport } from './routes/_app/batches.index'
+import { Route as AppSettingsCompanyRouteImport } from './routes/_app/settings.company'
+import { Route as AppBatchesUploadRouteImport } from './routes/_app/batches.upload'
+import { Route as AppBatchesBatchIdRouteImport } from './routes/_app/batches.$batchId'
+import { Route as AppApprovalsQueueRouteImport } from './routes/_app/approvals.queue'
+import { Route as AppApprovalsConfigurationsIndexRouteImport } from './routes/_app/approvals.configurations.index'
+import { Route as AppApprovalsConfigurationsNewRouteImport } from './routes/_app/approvals.configurations.new'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppUsersRoute = AppUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditLogsRoute = AppAuditLogsRouteImport.update({
+  id: '/audit-logs',
+  path: '/audit-logs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBatchesIndexRoute = AppBatchesIndexRouteImport.update({
+  id: '/batches/',
+  path: '/batches/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
+  id: '/settings/company',
+  path: '/settings/company',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBatchesUploadRoute = AppBatchesUploadRouteImport.update({
+  id: '/batches/upload',
+  path: '/batches/upload',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBatchesBatchIdRoute = AppBatchesBatchIdRouteImport.update({
+  id: '/batches/$batchId',
+  path: '/batches/$batchId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppApprovalsQueueRoute = AppApprovalsQueueRouteImport.update({
+  id: '/approvals/queue',
+  path: '/approvals/queue',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppApprovalsConfigurationsIndexRoute =
+  AppApprovalsConfigurationsIndexRouteImport.update({
+    id: '/approvals/configurations/',
+    path: '/approvals/configurations/',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppApprovalsConfigurationsNewRoute =
+  AppApprovalsConfigurationsNewRouteImport.update({
+    id: '/approvals/configurations/new',
+    path: '/approvals/configurations/new',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/audit-logs': typeof AppAuditLogsRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/reports': typeof AppReportsRoute
+  '/users': typeof AppUsersRoute
+  '/approvals/queue': typeof AppApprovalsQueueRoute
+  '/batches/$batchId': typeof AppBatchesBatchIdRoute
+  '/batches/upload': typeof AppBatchesUploadRoute
+  '/settings/company': typeof AppSettingsCompanyRoute
+  '/batches/': typeof AppBatchesIndexRoute
+  '/approvals/configurations/new': typeof AppApprovalsConfigurationsNewRoute
+  '/approvals/configurations/': typeof AppApprovalsConfigurationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/audit-logs': typeof AppAuditLogsRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/reports': typeof AppReportsRoute
+  '/users': typeof AppUsersRoute
+  '/approvals/queue': typeof AppApprovalsQueueRoute
+  '/batches/$batchId': typeof AppBatchesBatchIdRoute
+  '/batches/upload': typeof AppBatchesUploadRoute
+  '/settings/company': typeof AppSettingsCompanyRoute
+  '/batches': typeof AppBatchesIndexRoute
+  '/approvals/configurations/new': typeof AppApprovalsConfigurationsNewRoute
+  '/approvals/configurations': typeof AppApprovalsConfigurationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_app/audit-logs': typeof AppAuditLogsRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/reports': typeof AppReportsRoute
+  '/_app/users': typeof AppUsersRoute
+  '/_app/approvals/queue': typeof AppApprovalsQueueRoute
+  '/_app/batches/$batchId': typeof AppBatchesBatchIdRoute
+  '/_app/batches/upload': typeof AppBatchesUploadRoute
+  '/_app/settings/company': typeof AppSettingsCompanyRoute
+  '/_app/batches/': typeof AppBatchesIndexRoute
+  '/_app/approvals/configurations/new': typeof AppApprovalsConfigurationsNewRoute
+  '/_app/approvals/configurations/': typeof AppApprovalsConfigurationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/audit-logs'
+    | '/dashboard'
+    | '/reports'
+    | '/users'
+    | '/approvals/queue'
+    | '/batches/$batchId'
+    | '/batches/upload'
+    | '/settings/company'
+    | '/batches/'
+    | '/approvals/configurations/new'
+    | '/approvals/configurations/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/audit-logs'
+    | '/dashboard'
+    | '/reports'
+    | '/users'
+    | '/approvals/queue'
+    | '/batches/$batchId'
+    | '/batches/upload'
+    | '/settings/company'
+    | '/batches'
+    | '/approvals/configurations/new'
+    | '/approvals/configurations'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/login'
+    | '/_app/audit-logs'
+    | '/_app/dashboard'
+    | '/_app/reports'
+    | '/_app/users'
+    | '/_app/approvals/queue'
+    | '/_app/batches/$batchId'
+    | '/_app/batches/upload'
+    | '/_app/settings/company'
+    | '/_app/batches/'
+    | '/_app/approvals/configurations/new'
+    | '/_app/approvals/configurations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +221,120 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/users': {
+      id: '/_app/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AppUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/audit-logs': {
+      id: '/_app/audit-logs'
+      path: '/audit-logs'
+      fullPath: '/audit-logs'
+      preLoaderRoute: typeof AppAuditLogsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/batches/': {
+      id: '/_app/batches/'
+      path: '/batches'
+      fullPath: '/batches/'
+      preLoaderRoute: typeof AppBatchesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/company': {
+      id: '/_app/settings/company'
+      path: '/settings/company'
+      fullPath: '/settings/company'
+      preLoaderRoute: typeof AppSettingsCompanyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/batches/upload': {
+      id: '/_app/batches/upload'
+      path: '/batches/upload'
+      fullPath: '/batches/upload'
+      preLoaderRoute: typeof AppBatchesUploadRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/batches/$batchId': {
+      id: '/_app/batches/$batchId'
+      path: '/batches/$batchId'
+      fullPath: '/batches/$batchId'
+      preLoaderRoute: typeof AppBatchesBatchIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/approvals/queue': {
+      id: '/_app/approvals/queue'
+      path: '/approvals/queue'
+      fullPath: '/approvals/queue'
+      preLoaderRoute: typeof AppApprovalsQueueRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/approvals/configurations/': {
+      id: '/_app/approvals/configurations/'
+      path: '/approvals/configurations'
+      fullPath: '/approvals/configurations/'
+      preLoaderRoute: typeof AppApprovalsConfigurationsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/approvals/configurations/new': {
+      id: '/_app/approvals/configurations/new'
+      path: '/approvals/configurations/new'
+      fullPath: '/approvals/configurations/new'
+      preLoaderRoute: typeof AppApprovalsConfigurationsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAuditLogsRoute: typeof AppAuditLogsRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppReportsRoute: typeof AppReportsRoute
+  AppUsersRoute: typeof AppUsersRoute
+  AppApprovalsQueueRoute: typeof AppApprovalsQueueRoute
+  AppBatchesBatchIdRoute: typeof AppBatchesBatchIdRoute
+  AppBatchesUploadRoute: typeof AppBatchesUploadRoute
+  AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
+  AppBatchesIndexRoute: typeof AppBatchesIndexRoute
+  AppApprovalsConfigurationsNewRoute: typeof AppApprovalsConfigurationsNewRoute
+  AppApprovalsConfigurationsIndexRoute: typeof AppApprovalsConfigurationsIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAuditLogsRoute: AppAuditLogsRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppReportsRoute: AppReportsRoute,
+  AppUsersRoute: AppUsersRoute,
+  AppApprovalsQueueRoute: AppApprovalsQueueRoute,
+  AppBatchesBatchIdRoute: AppBatchesBatchIdRoute,
+  AppBatchesUploadRoute: AppBatchesUploadRoute,
+  AppSettingsCompanyRoute: AppSettingsCompanyRoute,
+  AppBatchesIndexRoute: AppBatchesIndexRoute,
+  AppApprovalsConfigurationsNewRoute: AppApprovalsConfigurationsNewRoute,
+  AppApprovalsConfigurationsIndexRoute: AppApprovalsConfigurationsIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
