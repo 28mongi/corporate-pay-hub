@@ -1,67 +1,55 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import { PageHeader } from "@/components/app-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { batches } from "@/lib/mock-data";
 import { StatusBadge } from "@/components/status-badge";
 import { formatMoney, formatDate } from "@/lib/format";
-import { useMemo, useState } from "react";
-import { Plus, Search, Download } from "lucide-react";
+import { useState } from "react";
+import { Plus, Search } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  flexRender, getCoreRowModel, getPaginationRowModel, getSortedRowModel,
-  useReactTable, type ColumnDef, type SortingState,
-} from "@tanstack/react-table";
-import type { PaymentBatch } from "@/lib/types";
+import { batchApi } from "@/features/batches/api/batch-api";
+import { EmptyState, ErrorState, TableSkeleton } from "@/components/data-states";
 
 export const Route = createFileRoute("/_app/batches/")({
   component: BatchesList,
-  head: () => ({ meta: [{ title: "Payment Batches — Meridian Pay" }] }),
+  head: () => ({ meta: [{ title: "Payment Batches — Corporate Pay Hub" }] }),
 });
 
-const columns: ColumnDef<PaymentBatch>[] = [
-  {
-    accessorKey: "reference",
-    header: "Reference",
-    cell: ({ row }) => (
-      <Link to="/batches/$batchId" params={{ batchId: row.original.id }} className="font-medium hover:text-accent">
-        {row.original.reference}
-      </Link>
-    ),
-  },
-  { accessorKey: "fileName", header: "File", cell: ({ row }) => <span className="text-muted-foreground">{row.original.fileName}</span> },
-  { accessorKey: "type", header: "Type", cell: ({ row }) => <span className="text-xs font-medium px-2 py-0.5 rounded bg-secondary">{row.original.type}</span> },
-  { accessorKey: "totalRecords", header: () => <div className="text-right">Records</div>, cell: ({ row }) => <div className="text-right tabular-nums">{row.original.totalRecords}</div> },
-  { accessorKey: "totalAmount", header: () => <div className="text-right">Amount</div>, cell: ({ row }) => <div className="text-right tabular-nums font-medium">{formatMoney(row.original.totalAmount, row.original.currency)}</div> },
-  { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
-  { accessorKey: "createdBy", header: "Created by" },
-  { accessorKey: "createdAt", header: "Created", cell: ({ row }) => <span className="text-muted-foreground text-xs">{formatDate(row.original.createdAt)}</span> },
+const STATUS_OPTIONS = [
+  "DRAFT","PENDING_APPROVAL","PARTIALLY_APPROVED","APPROVED","REJECTED",
+  "RETURNED_FOR_CORRECTION","SUBMITTED_FOR_PROCESSING","PROCESSING","COMPLETED",
+  "PARTIALLY_COMPLETED","FAILED","CANCELLED",
 ];
 
 function BatchesList() {
-  const [q, setQ] = useState("");
+  const [batchNo, setBatchNo] = useState("");
   const [status, setStatus] = useState<string>("ALL");
-  const [type, setType] = useState<string>("ALL");
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [page, setPage] = useState(0);
+  const size = 10;
 
-  const data = useMemo(() => batches.filter((b) => {
-    if (status !== "ALL" && b.status !== status) return false;
-    if (type !== "ALL" && b.type !== type) return false;
-    if (q && !`${b.reference} ${b.fileName} ${b.createdBy}`.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  }), [q, status, type]);
-
-  const table = useReactTable({
-    data, columns, state: { sorting }, onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
+    queryKey: ["batches", { page, size, status, batchNo, fromDate, toDate }],
+    queryFn: () => batchApi.getBatches({
+      page, size,
+      status: status === "ALL" ? undefined : status,
+      batchNo: batchNo || undefined,
+      fromDate: fromDate || undefined,
+      toDate: toDate || undefined,
+    }),
+    placeholderData: keepPreviousData,
   });
+
+  const rows = data?.content ?? [];
+  const totalPages = data?.totalPages ?? 0;
+  const totalElements = data?.totalElements ?? 0;
 
   return (
     <>
@@ -69,10 +57,7 @@ function BatchesList() {
         title="Payment Batches"
         description="All payment batches submitted by your company."
         actions={
-          <>
-            <Button variant="outline" size="sm"><Download className="h-4 w-4" /> Export</Button>
-            <Button asChild size="sm"><Link to="/batches/upload"><Plus className="h-4 w-4" /> New Batch</Link></Button>
-          </>
+          <Button asChild size="sm"><Link to="/batches/upload"><Plus className="h-4 w-4" /> New batch</Link></Button>
         }
       />
       <Card className="border-border/70">
@@ -80,60 +65,79 @@ function BatchesList() {
           <div className="flex flex-wrap gap-2 items-center mb-4">
             <div className="relative flex-1 min-w-[220px]">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search reference, file or creator…" className="pl-9" />
+              <Input
+                value={batchNo}
+                onChange={(e) => { setBatchNo(e.target.value); setPage(0); }}
+                placeholder="Search by batch number…"
+                className="pl-9"
+              />
             </div>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-[200px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setPage(0); }}>
+              <SelectTrigger className="w-[210px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All statuses</SelectItem>
-                {["DRAFT","PENDING_APPROVAL","PARTIALLY_APPROVED","APPROVED","REJECTED","PROCESSING","COMPLETED","PARTIALLY_COMPLETED","FAILED","CANCELLED"].map((s) => (
+                {STATUS_OPTIONS.map((s) => (
                   <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Type" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All types</SelectItem>
-                {["INTERNAL","RTGS","TIPS","GEPG"].map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Input type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(0); }} className="w-[160px]" />
+            <Input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(0); }} className="w-[160px]" />
           </div>
 
-          <div className="border border-border rounded-md overflow-hidden">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((hg) => (
-                  <TableRow key={hg.id} className="bg-muted/40 hover:bg-muted/40">
-                    {hg.headers.map((h) => (
-                      <TableHead key={h.id} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                      </TableHead>
+          {isLoading ? (
+            <TableSkeleton rows={8} cols={7} />
+          ) : isError ? (
+            <ErrorState message={(error as Error)?.message} onRetry={() => refetch()} />
+          ) : rows.length === 0 ? (
+            <EmptyState title="No batches found" description="No batches match your current filters." />
+          ) : (
+            <>
+              <div className="border border-border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableHead className="text-xs uppercase">Batch No</TableHead>
+                      <TableHead className="text-xs uppercase">Debit Account</TableHead>
+                      <TableHead className="text-xs uppercase text-right">Records</TableHead>
+                      <TableHead className="text-xs uppercase text-right">Amount</TableHead>
+                      <TableHead className="text-xs uppercase">Status</TableHead>
+                      <TableHead className="text-xs uppercase">Created by</TableHead>
+                      <TableHead className="text-xs uppercase">Created</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.map((b) => (
+                      <TableRow key={b.id}>
+                        <TableCell>
+                          <Link to="/batches/$batchId" params={{ batchId: b.id }} className="font-medium hover:text-accent">
+                            {b.batchNo}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{b.debitAccount ?? "—"}</TableCell>
+                        <TableCell className="text-right tabular-nums">{b.totalRecords}</TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {formatMoney(b.totalAmount, b.currency)}
+                        </TableCell>
+                        <TableCell><StatusBadge status={b.status} /></TableCell>
+                        <TableCell className="text-sm">{b.createdBy ?? "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{formatDate(b.createdAt)}</TableCell>
+                      </TableRow>
                     ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length === 0 ? (
-                  <TableRow><TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">No batches match your filters.</TableCell></TableRow>
-                ) : table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((c) => (
-                      <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableBody>
+                </Table>
+              </div>
 
-          <div className="flex items-center justify-between mt-4 text-xs text-muted-foreground">
-            <div>{table.getFilteredRowModel().rows.length} batches</div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Prev</Button>
-              <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</Button>
-            </div>
-          </div>
+              <div className="flex items-center justify-between mt-4 text-xs text-muted-foreground">
+                <div>{totalElements} batches{isFetching ? " · refreshing…" : ""}</div>
+                <div className="flex gap-2 items-center">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Prev</Button>
+                  <span>Page {page + 1} of {Math.max(totalPages, 1)}</span>
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page + 1 >= totalPages}>Next</Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </>

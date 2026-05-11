@@ -1,13 +1,15 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import {
   Outlet,
-  Link,
   createRootRouteWithContext,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/lib/auth";
+import { sessionApi } from "@/features/session/api/session-api";
+import { SessionProvider } from "@/features/session/session-context";
+import { AccessDenied, FullScreenLoader } from "@/components/access-denied";
+import { ApiError } from "@/lib/api-client";
 
 import appCss from "../styles.css?url";
 
@@ -16,8 +18,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Meridian Pay — Corporate Payments Portal" },
-      { name: "description", content: "Enterprise-grade corporate payments portal: upload, approve, and process bulk payments securely." },
+      { title: "Corporate Pay Hub" },
+      { name: "description", content: "Corporate Pay Hub — secure embedded portal for bulk payment processing." },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
@@ -40,12 +42,33 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <SessionGate>
         <Outlet />
-        <Toaster richColors position="top-right" />
-      </AuthProvider>
+      </SessionGate>
+      <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );
+}
+
+function SessionGate({ children }: { children: React.ReactNode }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["session", "me"],
+    queryFn: () => sessionApi.getCurrentSession(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading) return <FullScreenLoader />;
+
+  if (error) {
+    const status = error instanceof ApiError ? error.status : 0;
+    if (status === 401 || status === 403) return <AccessDenied />;
+    return <AccessDenied detail="Unable to verify your session with the parent system." />;
+  }
+
+  if (!data) return <AccessDenied />;
+
+  return <SessionProvider value={data}>{children}</SessionProvider>;
 }
 
 function NotFound() {
@@ -54,7 +77,6 @@ function NotFound() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold tracking-tight">404</h1>
         <p className="mt-2 text-sm text-muted-foreground">This page does not exist.</p>
-        <Link to="/dashboard" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Go to dashboard</Link>
       </div>
     </div>
   );

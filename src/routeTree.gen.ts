@@ -9,10 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppUsersRouteImport } from './routes/_app/users'
 import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAuditLogsRouteImport } from './routes/_app/audit-logs'
@@ -24,11 +22,6 @@ import { Route as AppApprovalsQueueRouteImport } from './routes/_app/approvals.q
 import { Route as AppApprovalsConfigurationsIndexRouteImport } from './routes/_app/approvals.configurations.index'
 import { Route as AppApprovalsConfigurationsNewRouteImport } from './routes/_app/approvals.configurations.new'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
@@ -37,11 +30,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AppUsersRoute = AppUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AppRoute,
 } as any)
 const AppReportsRoute = AppReportsRouteImport.update({
   id: '/reports',
@@ -98,11 +86,9 @@ const AppApprovalsConfigurationsNewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
   '/audit-logs': typeof AppAuditLogsRoute
   '/dashboard': typeof AppDashboardRoute
   '/reports': typeof AppReportsRoute
-  '/users': typeof AppUsersRoute
   '/approvals/queue': typeof AppApprovalsQueueRoute
   '/batches/$batchId': typeof AppBatchesBatchIdRoute
   '/batches/upload': typeof AppBatchesUploadRoute
@@ -113,11 +99,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/login': typeof LoginRoute
   '/audit-logs': typeof AppAuditLogsRoute
   '/dashboard': typeof AppDashboardRoute
   '/reports': typeof AppReportsRoute
-  '/users': typeof AppUsersRoute
   '/approvals/queue': typeof AppApprovalsQueueRoute
   '/batches/$batchId': typeof AppBatchesBatchIdRoute
   '/batches/upload': typeof AppBatchesUploadRoute
@@ -130,11 +114,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
-  '/login': typeof LoginRoute
   '/_app/audit-logs': typeof AppAuditLogsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/reports': typeof AppReportsRoute
-  '/_app/users': typeof AppUsersRoute
   '/_app/approvals/queue': typeof AppApprovalsQueueRoute
   '/_app/batches/$batchId': typeof AppBatchesBatchIdRoute
   '/_app/batches/upload': typeof AppBatchesUploadRoute
@@ -147,11 +129,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/login'
     | '/audit-logs'
     | '/dashboard'
     | '/reports'
-    | '/users'
     | '/approvals/queue'
     | '/batches/$batchId'
     | '/batches/upload'
@@ -162,11 +142,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/login'
     | '/audit-logs'
     | '/dashboard'
     | '/reports'
-    | '/users'
     | '/approvals/queue'
     | '/batches/$batchId'
     | '/batches/upload'
@@ -178,11 +156,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
-    | '/login'
     | '/_app/audit-logs'
     | '/_app/dashboard'
     | '/_app/reports'
-    | '/_app/users'
     | '/_app/approvals/queue'
     | '/_app/batches/$batchId'
     | '/_app/batches/upload'
@@ -195,18 +171,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
-  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -220,13 +188,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_app/users': {
-      id: '/_app/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof AppUsersRouteImport
-      parentRoute: typeof AppRoute
     }
     '/_app/reports': {
       id: '/_app/reports'
@@ -305,7 +266,6 @@ interface AppRouteChildren {
   AppAuditLogsRoute: typeof AppAuditLogsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppReportsRoute: typeof AppReportsRoute
-  AppUsersRoute: typeof AppUsersRoute
   AppApprovalsQueueRoute: typeof AppApprovalsQueueRoute
   AppBatchesBatchIdRoute: typeof AppBatchesBatchIdRoute
   AppBatchesUploadRoute: typeof AppBatchesUploadRoute
@@ -319,7 +279,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppAuditLogsRoute: AppAuditLogsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppReportsRoute: AppReportsRoute,
-  AppUsersRoute: AppUsersRoute,
   AppApprovalsQueueRoute: AppApprovalsQueueRoute,
   AppBatchesBatchIdRoute: AppBatchesBatchIdRoute,
   AppBatchesUploadRoute: AppBatchesUploadRoute,
@@ -334,18 +293,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
-  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
