@@ -1,46 +1,108 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
 import { PageHeader } from "@/components/app-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useCallback, useState } from "react";
-import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, X } from "lucide-react";
-import { formatMoney } from "@/lib/format";
+import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, X, ChevronLeft } from "lucide-react";
+import { formatMoney, formatNumber } from "@/lib/format";
 import { toast } from "sonner";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { paymentFileApi } from "@/features/files/api/payment-file-api";
+import { batchApi } from "@/features/batches/api/batch-api";
+import { useSession } from "@/features/session/session-context";
+import type { FileUploadResult, FileValidationResult } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/batches/upload")({
   component: UploadBatch,
-  head: () => ({ meta: [{ title: "Upload Batch — Meridian Pay" }] }),
+  head: () => ({ meta: [{ title: "Upload Payment File — Corporate Pay Hub" }] }),
 });
 
-const previewItems = [
-  { ref: "REF00001", name: "Jane Doe", account: "0123456789", bank: "CRDB", amount: 250_000, valid: true },
-  { ref: "REF00002", name: "ACME Supplies", account: "0987654321", bank: "NMB", amount: 1_400_000, valid: true },
-  { ref: "REF00003", name: "Kibo Foods", account: "0234567890", bank: "NBC", amount: 78_500, valid: true },
-  { ref: "REF00004", name: "John Smith", account: "01XXX", bank: "STAN", amount: 12_000, valid: false, reason: "Invalid account format" },
-  { ref: "REF00002", name: "ACME Supplies", account: "0987654321", bank: "NMB", amount: 1_400_000, valid: false, reason: "Duplicate reference" },
-  { ref: "REF00006", name: "Zawadi Traders", account: "0345678901", bank: "EQTY", amount: 540_000, valid: true },
-];
+function downloadCsv(filename: string, rows: Array<Record<string, unknown>>) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csv = [headers.join(",")].concat(
+    rows.map((r) => headers.map((h) => JSON.stringify(r[h] ?? "")).join(","))
+  ).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
 
 function UploadBatch() {
   const navigate = useNavigate();
+  const session = useSession();
   const [file, setFile] = useState<File | null>(null);
   const [drag, setDrag] = useState(false);
+  const [validation, setValidation] = useState<FileValidationResult | null>(null);
+  const [uploadResult, setUploadResult] = useState<FileUploadResult | null>(null);
+  const [batchNo, setBatchNo] = useState("");
+  const [debitAccount, setDebitAccount] = useState("");
+  const [currency, setCurrency] = useState("TZS");
+
+  const validateMut = useMutation({
+    mutationFn: (f: File) => paymentFileApi.validatePaymentFile(f),
+    onSuccess: (data) => { setValidation(data); setUploadResult(null); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const uploadMut = useMutation({
+    mutationFn: (f: File) => paymentFileApi.uploadPaymentFile(f),
+    onSuccess: (data) => {
+      setUploadResult(data);
+      if (data.currency) setCurrency(data.currency);
+      toast.success("File uploaded. Provide batch details to continue.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const createBatchMut = useMutation({
+    mutationFn: () => {
+      if (!uploadResult) throw new Error("No uploaded file");
+      return batchApi.createBatch({
+        fileId: uploadResult.fileId,
+        batchNo: batchNo.trim(),
+        debitAccount: debitAccount.trim(),
+        currency: currency.trim(),
+      });
+    },
+    onSuccess: (batch) => {
+      toast.success("Batch created");
+      navigate({ to: "/batches/$batchId", params: { batchId: batch.id } });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handleFile = (f: File | null) => {
+    setFile(f);
+    setValidation(null);
+    setUploadResult(null);
+    if (f) validateMut.mutate(f);
+  };
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setDrag(false);
-    const f = e.dataTransfer.files?.[0]; if (f) setFile(f);
+    const f = e.dataTransfer.files?.[0]; if (f) handleFile(f);
   }, []);
 
-  const total = previewItems.reduce((s, i) => s + i.amount, 0);
-  const validCount = previewItems.filter((i) => i.valid).length;
-  const invalidCount = previewItems.length - validCount;
+  const reset = () => {
+    setFile(null); setValidation(null); setUploadResult(null);
+    setBatchNo(""); setDebitAccount("");
+  };
+
+  const canUpload = !!file && !!validation && validation.invalidRows === 0 && !uploadResult;
+  const canCreate = !!uploadResult && batchNo.trim().length > 0 && debitAccount.trim().length > 0 && currency.trim().length > 0;
 
   return (
     <>
-      <PageHeader title="Upload Payment Batch" description="Upload a CSV or Excel file. We will validate every record before submission." />
+      <Link to="/batches" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-3">
+        <ChevronLeft className="h-3.5 w-3.5" /> All batches
+      </Link>
+      <PageHeader title="Upload Payment File" description="Upload a CSV or Excel file. Every record is validated against the bank gateway before submission." />
 
       <div className="grid lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 border-border/70">
@@ -58,9 +120,9 @@ function UploadBatch() {
                     <UploadCloud className="h-6 w-6 text-primary" />
                   </div>
                   <div className="mt-4 text-sm font-medium">Drop file here or click to browse</div>
-                  <div className="text-xs text-muted-foreground mt-1">CSV, XLS or XLSX · max 20MB · up to 10,000 rows</div>
+                  <div className="text-xs text-muted-foreground mt-1">CSV, XLS or XLSX</div>
                   <label className="mt-4 inline-flex">
-                    <input type="file" className="hidden" accept=".csv,.xls,.xlsx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                    <input type="file" className="hidden" accept=".csv,.xls,.xlsx" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
                     <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium cursor-pointer hover:bg-primary/90">
                       Select file
                     </span>
@@ -74,43 +136,43 @@ function UploadBatch() {
                     </div>
                     <div className="text-left">
                       <div className="text-sm font-medium">{file.name}</div>
-                      <div className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB · validated</div>
+                      <div className="text-xs text-muted-foreground">
+                        {(file.size / 1024).toFixed(1)} KB
+                        {validateMut.isPending ? " · validating…" : validation ? " · validated" : ""}
+                      </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setFile(null)}><X className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={reset}><X className="h-4 w-4" /></Button>
                 </div>
               )}
             </div>
 
-            {file && (
+            {validation && validation.invalidRows > 0 && (
               <div className="mt-6">
-                <div className="text-sm font-semibold mb-3">2. Validation results</div>
-                <div className="border border-border rounded-md overflow-hidden">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm font-semibold">2. Validation errors ({validation.invalidRows})</div>
+                  <Button size="sm" variant="outline" onClick={() => downloadCsv(`${validation.fileName}-errors.csv`, validation.errors)}>
+                    Download errors as CSV
+                  </Button>
+                </div>
+                <div className="border border-border rounded-md overflow-hidden max-h-80 overflow-y-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="text-xs uppercase">Reference</TableHead>
-                        <TableHead className="text-xs uppercase">Beneficiary</TableHead>
-                        <TableHead className="text-xs uppercase">Account</TableHead>
-                        <TableHead className="text-xs uppercase">Bank</TableHead>
-                        <TableHead className="text-xs uppercase text-right">Amount</TableHead>
-                        <TableHead className="text-xs uppercase">Status</TableHead>
+                        <TableHead className="text-xs uppercase">Row</TableHead>
+                        <TableHead className="text-xs uppercase">Field</TableHead>
+                        <TableHead className="text-xs uppercase">Error</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {previewItems.map((p, i) => (
-                        <TableRow key={i} className={!p.valid ? "bg-destructive/5" : ""}>
-                          <TableCell className="font-mono text-xs">{p.ref}</TableCell>
-                          <TableCell>{p.name}</TableCell>
-                          <TableCell className="font-mono text-xs">{p.account}</TableCell>
-                          <TableCell>{p.bank}</TableCell>
-                          <TableCell className="text-right tabular-nums">{formatMoney(p.amount)}</TableCell>
-                          <TableCell>
-                            {p.valid ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-success"><CheckCircle2 className="h-3.5 w-3.5" /> Valid</span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3.5 w-3.5" /> {p.reason}</span>
-                            )}
+                      {validation.errors.map((e, i) => (
+                        <TableRow key={i} className="bg-destructive/5">
+                          <TableCell className="font-mono text-xs">{e.rowNumber}</TableCell>
+                          <TableCell className="text-xs">{e.field ?? "—"}</TableCell>
+                          <TableCell className="text-xs">
+                            <span className="inline-flex items-center gap-1 text-destructive">
+                              <AlertCircle className="h-3.5 w-3.5" /> {e.message}
+                            </span>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -119,32 +181,70 @@ function UploadBatch() {
                 </div>
               </div>
             )}
+
+            {validation && validation.invalidRows === 0 && !uploadResult && (
+              <div className="mt-6 p-4 rounded-md border border-success/30 bg-success/5 flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+                <div className="text-sm">
+                  All {formatNumber(validation.validRows)} records are valid. You can upload this file.
+                </div>
+              </div>
+            )}
+
+            {uploadResult && (
+              <div className="mt-6 space-y-4">
+                <div className="text-sm font-semibold">3. Batch details</div>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Batch number</Label>
+                    <Input value={batchNo} onChange={(e) => setBatchNo(e.target.value)} placeholder="e.g. BTH-2026-0001" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Debit account</Label>
+                    <Input value={debitAccount} onChange={(e) => setDebitAccount(e.target.value)} placeholder="Account number" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Currency</Label>
+                    <Input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} maxLength={3} />
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="border-border/70 h-fit">
           <CardContent className="p-5 space-y-4">
-            <div className="text-sm font-semibold">Batch summary</div>
+            <div className="text-sm font-semibold">Summary</div>
             <div className="space-y-3">
-              <Row k="Total records" v={String(previewItems.length)} />
-              <Row k="Valid" v={String(validCount)} tone="success" />
-              <Row k="Invalid" v={String(invalidCount)} tone={invalidCount ? "destructive" : "default"} />
-              <Row k="Duplicate refs" v="1" tone={invalidCount ? "warning" : "default"} />
+              <Row k="File" v={validation?.fileName ?? file?.name ?? "—"} />
+              <Row k="Total rows" v={validation ? formatNumber(validation.totalRows) : "—"} />
+              <Row k="Valid" v={validation ? formatNumber(validation.validRows) : "—"} tone="success" />
+              <Row k="Invalid" v={validation ? formatNumber(validation.invalidRows) : "—"} tone={validation && validation.invalidRows > 0 ? "destructive" : "default"} />
               <div className="border-t border-border pt-3" />
-              <Row k="Total amount" v={formatMoney(total)} bold />
+              <Row k="Total amount" v={validation ? formatMoney(validation.totalAmount, validation.currency ?? currency) : "—"} bold />
+              <Row k="Company" v={session.companyName ?? session.companyId ?? "—"} />
             </div>
-            <Button
-              className="w-full"
-              disabled={!file || invalidCount > 0}
-              onClick={() => {
-                toast.success("Batch created and submitted for approval");
-                navigate({ to: "/batches" });
-              }}
-            >
-              Create batch & submit for approval
-            </Button>
+
+            {!uploadResult ? (
+              <Button
+                className="w-full"
+                disabled={!canUpload || uploadMut.isPending}
+                onClick={() => file && uploadMut.mutate(file)}
+              >
+                {uploadMut.isPending ? "Uploading…" : "Upload validated file"}
+              </Button>
+            ) : (
+              <Button
+                className="w-full"
+                disabled={!canCreate || createBatchMut.isPending}
+                onClick={() => createBatchMut.mutate()}
+              >
+                {createBatchMut.isPending ? "Creating…" : "Create batch"}
+              </Button>
+            )}
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              By submitting, you confirm these payments comply with company policy and authorization mandates.
+              All records are validated server-side. Backend remains the final authorization authority.
             </p>
           </CardContent>
         </Card>
@@ -153,12 +253,12 @@ function UploadBatch() {
   );
 }
 
-function Row({ k, v, tone, bold }: { k: string; v: string; tone?: "default" | "success" | "destructive" | "warning"; bold?: boolean }) {
-  const cls = tone === "success" ? "text-success" : tone === "destructive" ? "text-destructive" : tone === "warning" ? "text-warning-foreground" : "";
+function Row({ k, v, tone, bold }: { k: string; v: string; tone?: "default" | "success" | "destructive"; bold?: boolean }) {
+  const cls = tone === "success" ? "text-success" : tone === "destructive" ? "text-destructive" : "";
   return (
-    <div className="flex items-center justify-between text-sm">
+    <div className="flex items-center justify-between text-sm gap-2">
       <span className="text-muted-foreground">{k}</span>
-      <span className={`tabular-nums ${cls} ${bold ? "font-semibold text-base text-foreground" : ""}`}>{v}</span>
+      <span className={`tabular-nums truncate ${cls} ${bold ? "font-semibold text-base text-foreground" : ""}`}>{v}</span>
     </div>
   );
 }
