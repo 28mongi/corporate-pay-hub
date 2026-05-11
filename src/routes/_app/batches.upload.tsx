@@ -151,7 +151,7 @@ function UploadBatch() {
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-sm font-semibold">2. Validation errors ({validation.invalidRows})</div>
-                  <Button size="sm" variant="outline" onClick={() => downloadCsv(`${validation.fileName}-errors.csv`, validation.errors)}>
+                  <Button size="sm" variant="outline" onClick={() => downloadCsv(`${validation.fileName}-errors.csv`, validation.errors.map((e) => ({ ...e })) as Array<Record<string, unknown>>)}>
                     Download errors as CSV
                   </Button>
                 </div>
