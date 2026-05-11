@@ -30,6 +30,7 @@ const schema = z.object({
   minAmount: z.number().min(0, "Min amount must be ≥ 0"),
   maxAmount: z.number().positive("Max amount must be > 0"),
   levels: z.array(z.object({
+    levelNumber: z.number().int().min(1),
     levelName: z.string().min(1, "Level name is required"),
     requiredApprovals: z.number().int().min(1, "Required approvals must be ≥ 1"),
     userIds: z.array(z.string().min(1)).min(1, "At least one approver user ID is required"),
