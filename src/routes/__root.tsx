@@ -10,8 +10,14 @@ import { sessionApi } from "@/features/session/api/session-api";
 import { SessionProvider } from "@/features/session/session-context";
 import { AccessDenied, FullScreenLoader } from "@/components/access-denied";
 import { ApiError } from "@/lib/api-client";
+import { bootstrapAuthToken } from "@/lib/auth-token";
 
 import appCss from "../styles.css?url";
+
+// Capture ?token=<jwt> from parent portal redirect before any API call fires.
+if (typeof window !== "undefined") {
+  bootstrapAuthToken();
+}
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
